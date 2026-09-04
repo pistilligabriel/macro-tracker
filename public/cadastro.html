@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Conta - MacroTracker</title>
+    <style>
+        :root { --bg: #f5f6fa; --card: #ffffff; --primary: #2ecc71; --text: #2f3640; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .card { background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; text-align: center; color: var(--primary); }
+        label { display: block; margin-top: 10px; font-size: 14px; font-weight: 600; }
+        input { width: 100%; padding: 12px; margin: 6px 0 12px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .footer-link { text-align: center; margin-top: 15px; font-size: 14px; }
+        .footer-link a { color: var(--primary); text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <h2>Nova Conta</h2>
+        <form id="registerForm">
+            <label>E-mail</label>
+            <input type="email" id="email" required>
+
+            <label>Senha</label>
+            <input type="password" id="senha" required>
+
+            <label>Altura (cm)</label>
+            <input type="number" id="altura" placeholder="Ex: 175" required>
+
+            <label>Peso Atual (kg)</label>
+            <input type="number" step="0.1" id="pesoAtual" placeholder="Ex: 78.5" required>
+
+            <label>Meta de Calorias (kcal)</label>
+            <input type="number" id="metaCalorias" placeholder="Ex: 2000" required>
+
+            <label>Meta de Carboidratos (g)</label>
+            <input type="number" id="metaCarboidratos" placeholder="Ex: 200" required>
+
+            <label>Meta de Proteínas (g)</label>
+            <input type="number" id="metaProteinas" placeholder="Ex: 150" required>
+
+            <label>Meta de Gorduras (g)</label>
+            <input type="number" id="metaGorduras" placeholder="Ex: 65" required>
+            
+            <label>Meta de Lipídios (g)</label>
+            <input type="text" id="metaLipidios" placeholder="Ex: 65" required>
+
+            <button type="submit">Cadastrar</button>
+        </form>
+        <div class="footer-link">
+            Já tem uma conta? <a href="/login.html">Fazer Login</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            email: document.getElementById('email').value,
+            senha: document.getElementById('senha').value,
+            altura: document.getElementById('altura').value,
+            pesoAtual: document.getElementById('pesoAtual').value,
+            metaCalorias: document.getElementById('metaCalorias').value,
+            metaCarboidratos: document.getElementById('metaCarboidratos').value,
+            metaProteinas: document.getElementById('metaProteinas').value,
+            metaGorduras: document.getElementById('metaGorduras').value,
+            metaLipidios: document.getElementById('metaLipidios').value
+        };
+
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const dados = await res.json();
+        if (res.status === 201) {
+            alert('Conta criada com sucesso! Faça login.');
+            window.location.href = '/login.html';
+        } else {
+            alert(dados.erro || 'Erro ao registrar.');
+        }
+    });
+</script>
+</body>
+</html>

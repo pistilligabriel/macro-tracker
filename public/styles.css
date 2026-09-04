@@ -1,0 +1,138 @@
+:root { 
+    --bg: #f5f6fa; 
+    --card: #ffffff; 
+    --primary: #2ecc71; 
+    --text: #2f3640; 
+}
+
+body { 
+    font-family: -apple-system, sans-serif; 
+    background: var(--bg); 
+    color: var(--text); 
+    margin: 0; 
+    padding: 15px; 
+}
+
+.container { 
+    max-width: 450px; 
+    margin: 0 auto; 
+}
+
+.card { 
+    background: var(--card); 
+    padding: 20px; 
+    border-radius: 16px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    margin-bottom: 15px; 
+}
+
+.main-cal { 
+    font-size: 42px; 
+    font-weight: bold; 
+    color: var(--primary); 
+    text-align: center; 
+    margin: 5px 0; 
+}
+
+.label { 
+    text-align: center; 
+    color: #7f8c8d; 
+    font-size: 13px; 
+    text-transform: uppercase; 
+    font-weight: bold; 
+}
+
+.macro-bar { 
+    margin: 15px 0; 
+}
+
+.macro-info { 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 14px; 
+    margin-bottom: 4px; 
+    font-weight: 600; 
+}
+
+.bar-bg { 
+    background: #eee; 
+    height: 10px; 
+    border-radius: 5px; 
+    overflow: hidden; 
+}
+
+.bar-fill { 
+    height: 100%; 
+    width: 0%; 
+    transition: width 0.4s ease; 
+}
+
+input, select, button { 
+    width: 100%; 
+    padding: 12px; 
+    margin: 6px 0; 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+    box-sizing: border-box; 
+    font-size: 16px; 
+}
+
+button { 
+    background: var(--primary); 
+    color: white; 
+    border: none; 
+    font-weight: bold; 
+    cursor: pointer; 
+    margin-top: 10px; 
+}
+
+.logout-btn { 
+    background: #e74c3c; 
+    padding: 6px 12px; 
+    font-size: 12px; 
+    width: auto; 
+    float: right; 
+    border-radius: 6px; 
+    margin: 0; 
+}
+
+.row-flex { 
+    display: flex; 
+    gap: 10px; 
+}
+
+.row-flex div { 
+    flex: 1; 
+}
+
+.input-label { 
+    font-size: 12px; 
+    font-weight: bold; 
+    color: #7f8c8d; 
+    margin-top: 4px; 
+    display: block; 
+}
+
+.item-historico {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 6px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.btn-deletar {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    width: auto;
+    margin: 0;
+}
+
+.btn-deletar:hover {
+    color: #c0392b;
+}

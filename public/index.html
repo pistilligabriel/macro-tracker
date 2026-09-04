@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário - MacroTracker</title>
+    <!-- Configurações nativas para PWA Mobile no iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Importação dos arquivos separados -->
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="container">
+    <button class="logout-btn" onclick="deslogar()">Sair</button>
+    <div style="clear: both; height: 10px;"></div>
+
+    <!-- Painel de Resultados (Calculado pelo backend) -->
+    <div class="card">
+        <div id="caloriasRestantes" class="main-cal">0</div>
+        <div class="label">kcal restantes hoje</div>
+
+        <div class="macro-bar">
+            <div class="macro-info"><span>Carboidratos</span><span id="txtCarbo">0g / 0g</span></div>
+            <div class="bar-bg"><div id="barCarbo" class="bar-fill" style="background: #e74c3c"></div></div>
+        </div>
+        <div class="macro-bar">
+            <div class="macro-info"><span>Proteínas</span><span id="txtProt">0g / 0g</span></div>
+            <div class="bar-bg"><div id="barProt" class="bar-fill" style="background: #3498db"></div></div>
+        </div>
+        <div class="macro-bar">
+            <div class="macro-info"><span>Gorduras</span><span id="txtGord">0g / 0g</span></div>
+            <div class="bar-bg"><div id="barGord" class="bar-fill" style="background: #f1c40f"></div></div>
+        </div>
+    </div>
+
+    <!-- Seção de Busca Local (Tabela TACO) -->
+    <div class="card">
+        <h3>🔍 Buscar Alimento (TACO)</h3>
+        <div class="row-flex">
+            <input type="text" id="buscaTermo" placeholder="Ex: Pão de forma integral">
+            <button type="button" onclick="pesquisarAlimento()" style="width: auto; margin: 6px 0; padding: 0 20px;">Buscar</button>
+        </div>
+        <select id="resultadoBusca" style="display: none;" onchange="selecionarAlimentoObjeto()">
+            <option value="">-- Selecione o alimento --</option>
+        </select>
+    </div>
+
+    <!-- Formulário Dinâmico Registrador -->
+    <div class="card">
+        <h3>Lançar no Diário</h3>
+        <form id="dietForm">
+            <span class="input-label">Refeição</span>
+            <select id="tipoRefeicao">
+                <option value="CAFE_DA_MANHA">Café da Manhã</option>
+                <option value="ALMOCO">Almoço</option>
+                <option value="LANCHE_TARDE">Lanche da Tarde</option>
+                <option value="JANTA">Janta</option>
+                <option value="CEIA">Ceia</option>
+            </select>
+
+            <span class="input-label">Alimento Selecionado</span>
+            <input type="text" id="nomeAlimento" placeholder="Nenhum selecionado" required readonly>
+
+            <div class="row-flex">
+                <div>
+                    <span class="input-label">Qtd (Unidades / Porções)</span>
+                    <input type="number" step="0.1" id="multiplicadorUnidades" value="1" required oninput="recalcularMacrosTotais()">
+                </div>
+                <div>
+                    <span class="input-label">Peso da Unidade (g)</span>
+                    <input type="number" id="pesoDaUnidade" value="100" required oninput="recalcularMacrosTotais()">
+                </div>
+            </div>
+
+            <div style="border-top: 1px dashed #ddd; margin: 15px 0;"></div>
+
+            <div class="row-flex">
+                <div>
+                    <span class="input-label">Total Peso (g)</span>
+                    <input type="number" id="quantidadeGramas" readonly required>
+                </div>
+                <div>
+                    <span class="input-label">Total Calorias (kcal)</span>
+                    <input type="number" id="calorias" readonly required>
+                </div>
+            </div>
+            <div class="row-flex">
+                <div>
+                    <span class="input-label">Carbos (g)</span>
+                    <input type="number" step="0.1" id="carboidratos" readonly required>
+                </div>
+                <div>
+                    <span class="input-label">Proteínas (g)</span>
+                    <input type="number" step="0.1" id="proteinas" readonly required>
+                </div>
+                <div>
+                    <span class="input-label">Gorduras (g)</span>
+                    <input type="number" step="0.1" id="gorduras" readonly required>
+                </div>
+            </div>
+
+            <button type="submit">Salvar no Diário</button>
+        </form>
+    </div>
+      <!-- Nova Seção: Histórico de Alimentos Lançados -->
+    <div class="card">
+        <h3>🍽️ Alimentos Consumidos Hoje</h3>
+        <div id="historicoRefeicoes">
+            <p style="color: #7f8c8d; text-align: center; font-size: 14px;">Nenhum alimento lançado hoje.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts carregados no final do body por performance -->
+<script src="/app.js"></script>
+</body>
+</html>
+
+    <script>
+      const TOKEN = localStorage.getItem('token_macros');
+let alimentoSelecionadoNativo = null; // Guarda a referência nutricional padrão por 100g
+
+// Redireciona para o login caso o usuário tente acessar sem estar autenticado
+if (!TOKEN) { 
+    window.location.href = '/login.html'; 
+}
+
+// Dispara a busca local na rota do backend Node (Livre de CORS)
+async function pesquisarAlimento() {
+    const termo = document.getElementById('buscaTermo').value;
+    if (!termo) return alert('Digite o nome do alimento para pesquisar.');
+
+    const select = document.getElementById('resultadoBusca');
+    select.innerHTML = '<option value="">Buscando alimentos...</option>';
+    select.style.display = 'block';
+
+    try {
+        const res = await fetch(`/api/diario/buscar-alimento?termo=${encodeURIComponent(termo)}`, {
+            method: 'GET',
+            headers: { 'Authorization': TOKEN }
+        });
+
+        if (!res.ok) throw new Error('Erro na resposta do servidor.');
+
+        const listaProdutos = await res.json();
+        select.innerHTML = '<option value="">-- Selecione o alimento --</option>';
+
+        if (!listaProdutos || listaProdutos.length === 0) {
+            select.innerHTML = '<option value="">Nenhum alimento encontrado na tabela TACO.</option>';
+            return;
+        }
+
+        listaProdutos.forEach((prod, index) => {
+            const opt = document.createElement('option');
+            opt.value = index;
+            opt.innerText = prod.description;
+            opt.dataset.produtoRaw = JSON.stringify(prod);
+            select.appendChild(opt);
+        });
+
+    } catch (error) {
+        console.error('Erro na busca via front:', error);
+        select.innerHTML = '<option value="">Erro ao carregar os resultados.</option>';
+    }
+}
+
+// Captura a seleção do seletor e higieniza strings textuais ou vazias de forma segura
+function selecionarAlimentoObjeto() {
+    const select = document.getElementById('resultadoBusca');
+    const opt = select.options[select.selectedIndex];
+    if (!opt || !opt.dataset.produtoRaw) return;
+
+    const prod = JSON.parse(opt.dataset.produtoRaw);
+    
+    const limparDado = (valor) => {
+        if (typeof valor === 'number') return valor;
+        if (!valor || valor === 'NA' || valor === '-') return 0;
+        const num = parseFloat(String(valor).replace(',', '.'));
+        return isNaN(num) ? 0 : num;
+    };
+
+    alimentoSelecionadoNativo = {
+        nome: prod.description,
+        kcal100g: limparDado(prod.energy_kcal),
+        carbo100g: limparDado(prod.carbohydrate_g),
+        prot100g: limparDado(prod.protein_g),
+        gord100g: limparDado(prod.lipid_g)
+    };
+
+    document.getElementById('nomeAlimento').value = alimentoSelecionadoNativo.nome;
+    document.getElementById('pesoDaUnidade').value = 100; // Define a base padrão da UNICAMP (100g)
+    document.getElementById('multiplicadorUnidades').value = 1; // Inicia com 1 unidade padrão
+    
+    recalcularMacrosTotais();
+}
+
+// Executa a regra de três e escreve os dados de forma explícita nos inputs visuais
+function recalcularMacrosTotais() {
+    if (!alimentoSelecionadoNativo) return;
+
+    const unidades = parseFloat(document.getElementById('multiplicadorUnidades').value);
+    const pesoUnidade = parseFloat(document.getElementById('pesoDaUnidade').value);
+
+    const qtdValida = isNaN(unidades) ? 0 : unidades;
+    const pesoValido = isNaN(pesoUnidade) ? 0 : pesoUnidade;
+
+    const gramasTotais = qtdValida * pesoValido;
+
+    const calorias = Math.round((alimentoSelecionadoNativo.kcal100g / 100) * gramasTotais);
+    const carbo = ((alimentoSelecionadoNativo.carbo100g / 100) * gramasTotais).toFixed(1);
+    const prot = ((alimentoSelecionadoNativo.prot100g / 100) * gramasTotais).toFixed(1);
+    const gord = ((alimentoSelecionadoNativo.gord100g / 100) * gramasTotais).toFixed(1);
+
+    document.getElementById('quantidadeGramas').value = Math.round(gramasTotais);
+    document.getElementById('calorias').value = calorias;
+    document.getElementById('carboidratos').value = carbo;
+    document.getElementById('proteinas').value = prot;
+    document.getElementById('gorduras').value = gord;
+}
+
+// Puxa o resumo acumulado de hoje direto do banco Prisma Postgres na Vercel
+// ATUALIZAÇÃO DA FUNÇÃO DASHBOARD COM BOTÃO DE EXCLUIR
+async function atualizarDashboard() {
+    try {
+        const res = await fetch('/api/diario/resumo', { headers: { 'Authorization': TOKEN } });
+        if(res.status === 401 || res.status === 403) { deslogar(); return; }
+        const d = await res.json();
+
+        document.getElementById('caloriasRestantes').innerText = d.caloriasRestantes;
+        document.getElementById('txtCarbo').innerText = `${d.consumidoCarboidratos}g / ${d.metaCarboidratos}g`;
+        document.getElementById('txtProt').innerText = `${d.consumidoProteinas}g / ${d.metaProteinas}g`;
+        document.getElementById('txtGord').innerText = `${d.consumidoGorduras}g / ${d.metaGorduras}g`;
+
+        document.getElementById('barCarbo').style.width = `${Math.min(100, (d.consumidoCarboidratos / d.metaCarboidratos) * 100)}%`;
+        document.getElementById('barProt').style.width = `${Math.min(100, (d.consumidoProteinas / d.metaProteinas) * 100)}%`;
+        document.getElementById('barGord').style.width = `${Math.min(100, (d.consumidoGorduras / d.metaGorduras) * 100)}%`;
+
+        const divHistorico = document.getElementById('historicoRefeicoes');
+        divHistorico.innerHTML = '';
+
+        if (!d.itens || d.itens.length === 0) {
+            divHistorico.innerHTML = '<p style="color: #7f8c8d; text-align: center; font-size: 14px;">Nenhum alimento lançado hoje.</p>';
+            return;
+        }
+
+        const traduçãoRefeicoes = {
+            'CAFE_DA_MANHA': '☕ Café da Manhã',
+            'ALMOCO': '🍛 Almoço',
+            'LANCHE_TARDE': '🍌 Lanche da Tarde',
+            'JANTA': '🍽️ Janta',
+            'CEIA': '🥛 Ceia'
+        };
+
+        const agrupado = {};
+        d.itens.forEach(item => {
+            if (!agrupado[item.tipoRefeicao]) { agrupado[item.tipoRefeicao] = []; }
+            agrupado[item.tipoRefeicao].push(item);
+        });
+
+        for (const [refeicao, listaAlimentos] of Object.entries(agrupado)) {
+            const tituloRefeicao = traduçãoRefeicoes[refeicao] || refeicao;
+            
+            let blocoHtml = `
+                <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                    <strong style="color: #2c3e50; font-size: 15px; display: block; margin-bottom: 5px;">${tituloRefeicao}</strong>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+            `;
+
+            listaAlimentos.forEach(alimento => {
+                blocoHtml += `
+                    <div class="item-historico">
+                        <div>
+                            <strong>${alimento.nomeAlimento}</strong> - ${alimento.quantidadeGramas}g 
+                            <br>
+                            <span style="color: #7f8c8d; font-size: 12px;">(${alimento.calorias} kcal | C: ${alimento.carboidratos}g P: ${alimento.proteinas}g G: ${alimento.gorduras}g)</span>
+                        </div>
+                        <!-- 💡 BOTÃO DA LIXEIRA: Passa o ID do alimento para a exclusão -->
+                        <button class="btn-deletar" onclick="excluirItemDiario(${alimento.id})" title="Remover alimento">🗑️</button>
+                    </div>
+                `;
+            });
+
+            blocoHtml += `</div></div>`;
+            divHistorico.innerHTML += blocoHtml;
+        }
+
+    } catch (err) {
+        console.error("Erro ao renderizar dados no dashboard:", err);
+    }
+}
+
+// 💡 NOVA FUNÇÃO: DISPARA A REQUISIÇÃO DE EXCLUSÃO PARA O NODE
+async function excluirItemDiario(idItem) {
+    if (!confirm('Deseja realmente remover este alimento do seu diário?')) return;
+
+    try {
+        const res = await fetch(`/api/diario/excluir-alimento?id=${idItem}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': TOKEN }
+        });
+
+        const dados = await res.json();
+
+        if (res.ok) {
+            atualizarDashboard(); // Recarrega o histórico e as barras de macros instantaneamente na tela
+        } else {
+            alert(dados.erro || 'Erro ao remover o alimento.');
+        }
+    } catch (error) {
+        console.error('Erro na deleção:', error);
+        alert('Não foi possível conectar ao servidor para excluir.');
+    }
+}
+
+
+
+// Envia a porção consumida para o banco
+document.getElementById('dietForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+        tipoRefeicao: document.getElementById('tipoRefeicao').value,
+        nomeAlimento: document.getElementById('nomeAlimento').value,
+        quantidadeGramas: document.getElementById('quantidadeGramas').value,
+        calorias: document.getElementById('calorias').value,
+        carboidratos: document.getElementById('carboidratos').value,
+        proteinas: document.getElementById('proteinas').value,
+        gorduras: document.getElementById('gorduras').value
+    };
+
+    const res = await fetch('/api/diario/alimento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': TOKEN },
+        body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+        document.getElementById('dietForm').reset();
+        document.getElementById('resultadoBusca').style.display = 'none';
+        document.getElementById('buscaTermo').value = '';
+        alimentoSelecionadoNativo = null;
+        atualizarDashboard(); // Recarrega os gráficos na hora
+    } else {
+        alert('Erro ao salvar refeição no diário.');
+    }
+});
+
+function deslogar() {
+    localStorage.removeItem('token_macros');
+    window.location.href = '/login.html';
+}
+
+// Roda a atualização inicial dos macros na abertura
+atualizarDashboard();
+    </script>
+  </body>
+</html>

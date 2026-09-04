@@ -1,0 +1,37 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+   output   = "../node_modules/.prisma/client"
+}
+
+model Usuario {
+  id               Int            @id @default(autoincrement())
+  email            String         @unique
+  senha            String
+  altura           Float
+  pesoAtual        Float
+  metaCalorias     Int
+  metaCarboidratos Float
+  metaProteinas    Float
+  metaGorduras     Float
+  metaLipidios     Float
+  itens            ItemRefeicao[]
+}
+
+model ItemRefeicao {
+  id               Int      @id @default(autoincrement())
+  usuarioId        Int
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  data             DateTime @default(now()) @db.Date
+  tipoRefeicao     String   // CAFE_DA_MANHA, ALMOCO, LANCHE_TARDE, JANTA, CEIA
+  nomeAlimento     String
+  quantidadeGramas Float
+  calorias         Int
+  carboidratos     Float
+  proteinas        Float
+  gorduras         Float
+  lipidios         Float
+}
