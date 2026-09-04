@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "./prisma/schema.prisma",
@@ -7,6 +7,7 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: env("PRISMA_DATABASE_URL"), 
+    // 💡 SOLUÇÃO: Mudamos de env() para process.env para a Vercel compilar o app sem travar
+    url: process.env.PRISMA_DATABASE_URL, 
   },
 });
